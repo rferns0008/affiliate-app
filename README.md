@@ -50,7 +50,7 @@ Start the FastAPI development server:
 
 Once the application is running, FastAPI automatically generates interactive API documentation.
 
-* **Swagger UI:** http://127.0.0.1:8000/docs
-* **ReDoc:** http://127.0.0.1:8000/redoc
+* **Swagger UI:** <http://127.0.0.1:8000/docs>
+* **ReDoc:** <http://127.0.0.1:8000/redoc>
 
 Use the Swagger UI to test endpoints and simulate incoming webhooks directly from your browser.
