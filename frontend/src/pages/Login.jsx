@@ -27,8 +27,15 @@ export default function Login() {
         navigate('/dashboard');
       } else {
         const errData = await response.json();
-        setError(errData.detail || 'Login failed');
+        if (typeof errData.detail === 'string') {
+          setError(errData.detail);
+        } else if (Array.isArray(errData.detail)) {
+          setError(errData.detail[0].msg); // Extracts the specific validation message
+        } else {
+          setError('Login failed');
+        }
       }
+
     } catch (err) {
       setError('Network error');
     }

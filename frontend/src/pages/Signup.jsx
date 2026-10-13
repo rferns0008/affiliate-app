@@ -39,7 +39,13 @@ export default function Signup() {
         navigate('/login');
       } else {
         const errData = await response.json();
-        setError(errData.detail || 'Signup failed');
+        if (typeof errData.detail === 'string') {
+          setError(errData.detail);
+        } else if (Array.isArray(errData.detail)) {
+          setError(errData.detail[0].msg); // Extracts the specific validation message
+        } else {
+          setError('Signup failed');
+        }
       }
     } catch (err) {
       setError('Network error');
