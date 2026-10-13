@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
+  // ... (keep your existing state and handleSubmit function the same)
+  
+  // (Adding the missing function body for context)
   const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -40,6 +43,9 @@ export default function Login() {
         <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         <button type="submit">Log In</button>
       </form>
+      <p style={{ marginTop: '1rem' }}>
+        Don't have an account? <Link to="/signup">Sign up here</Link>
+      </p>
     </div>
   );
 }
