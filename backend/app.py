@@ -2,9 +2,10 @@ import os
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, Header, HTTPException, Request, Response
+from fastapi import FastAPI, Header, HTTPException, Request, Response, APIRouter, status
 from pydantic import BaseModel
 import asyncpg
+from auth import get_password_hash, verify_password, create_access_token
 
 # --- Database Connection Management ---
 db_pool: Optional[asyncpg.Pool] = None
@@ -28,6 +29,12 @@ async def lifespan(app: FastAPI):
                 user_id VARCHAR(255) PRIMARY KEY,
                 balance INTEGER DEFAULT 0
             );
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                hashed_password VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
         """)
     yield
     await db_pool.close()
@@ -39,6 +46,10 @@ class StripeWebhookPayload(BaseModel):
     id: str
     type: str
     data: dict
+
+class UserAuth(BaseModel):
+    email: str
+    password: str
 
 # --- Webhook Endpoint ---
 @app.post("/webhooks/stripe")
@@ -99,3 +110,47 @@ async def stripe_webhook(
     # 7. Transaction commits automatically upon exiting the `async with conn.transaction():` block.
     return Response(status_code=200, content="Success")
 
+# --- Authentication Endpoints ---
+auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+@auth_router.post("/signup", status_code=status.HTTP_201_CREATED)
+async def signup(user: UserAuth):
+    hashed_pw = get_password_hash(user.password)
+    
+    if db_pool is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+        
+    async with db_pool.acquire() as conn:
+        try:
+            query = """
+                INSERT INTO users (email, hashed_password) 
+                VALUES ($1, $2) RETURNING id;
+            """
+            user_id = await conn.fetchval(query, user.email, hashed_pw)
+            return {"message": "User created successfully", "user_id": user_id}
+        except asyncpg.exceptions.UniqueViolationError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+
+@auth_router.post("/login")
+async def login(user: UserAuth):
+    if db_pool is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+        
+    async with db_pool.acquire() as conn:
+        query = "SELECT id, hashed_password FROM users WHERE email = $1"
+        db_user = await conn.fetchrow(query, user.email)
+        
+        if not db_user or not verify_password(user.password, db_user["hashed_password"]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password"
+            )
+            
+        access_token = create_access_token(data={"sub": user.email})
+        return {"access_token": access_token, "token_type": "bearer"}
+
+# Register the routes with the main FastAPI app
+app.include_router(auth_router)
