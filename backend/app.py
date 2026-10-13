@@ -59,8 +59,12 @@ class StripeWebhookPayload(BaseModel):
     type: str
     data: dict
 
-class UserAuth(BaseModel):
+class UserCreate(BaseModel):
     name: str
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
     email: str
     password: str
 
@@ -127,7 +131,7 @@ async def stripe_webhook(
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @auth_router.post("/signup", status_code=status.HTTP_201_CREATED)
-async def signup(user: UserAuth):
+async def signup(user: UserCreate):
     hashed_pw = get_password_hash(user.password)
     
     if db_pool is None:
@@ -148,7 +152,7 @@ async def signup(user: UserAuth):
             )
 
 @auth_router.post("/login")
-async def login(user: UserAuth):
+async def login(user: UserLogin):
     if db_pool is None:
         raise HTTPException(status_code=500, detail="Database not initialized")
         
