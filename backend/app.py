@@ -33,6 +33,7 @@ async def lifespan(app: FastAPI):
             );
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
                 email VARCHAR(255) UNIQUE NOT NULL,
                 hashed_password VARCHAR(255) NOT NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -136,7 +137,7 @@ async def signup(user: UserAuth):
         try:
             query = """
                 INSERT INTO users (name, email, hashed_password) 
-                VALUES ($1, $2) RETURNING id;
+                VALUES ($1, $2, $3) RETURNING id;
             """
             user_id = await conn.fetchval(query, user.name, user.email, hashed_pw)
             return {"message": "User created successfully", "user_id": user_id}
