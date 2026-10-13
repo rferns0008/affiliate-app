@@ -59,6 +59,7 @@ class StripeWebhookPayload(BaseModel):
     data: dict
 
 class UserAuth(BaseModel):
+    name: str
     email: str
     password: str
 
@@ -134,10 +135,10 @@ async def signup(user: UserAuth):
     async with db_pool.acquire() as conn:
         try:
             query = """
-                INSERT INTO users (email, hashed_password) 
+                INSERT INTO users (name, email, hashed_password) 
                 VALUES ($1, $2) RETURNING id;
             """
-            user_id = await conn.fetchval(query, user.email, hashed_pw)
+            user_id = await conn.fetchval(query, user.name, user.email, hashed_pw)
             return {"message": "User created successfully", "user_id": user_id}
         except asyncpg.exceptions.UniqueViolationError:
             raise HTTPException(
